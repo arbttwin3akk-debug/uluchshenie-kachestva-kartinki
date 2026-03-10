@@ -377,6 +377,16 @@ body {
   flex-wrap: wrap;
 }
 
+.btn-row-top {
+  margin-bottom: 1rem;
+  align-items: center;
+}
+
+.auto-hint {
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
 .btn-row .btn-primary {
   flex: 1;
   min-width: 160px;

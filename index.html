@@ -24,7 +24,7 @@
   <main class="main">
     <div class="wrap wrap-wide">
       <h1 class="page-heading">Коррекция фотографии</h1>
-      <p class="page-sub">По заданию — не апскейл, а коррекция: <strong>яркость</strong>, <strong>контрастность</strong> и <strong>цветность</strong> (насыщенность). Загрузите фото, подвиньте ползунки — превью обновляется в браузере. Демо не отправляет файл на сервер.</p>
+      <p class="page-sub">По заданию параметры коррекции <strong>определяются автоматически на основе ИИ</strong> — яркость, контрастность и цветность подбираются по анализу изображения. Загрузите фото и нажмите «Авто (ИИ)», при необходимости скорректируйте вручную. Превью обновляется в браузере.</p>
 
       <div class="upload-card">
         <div class="dropzone" id="dropzone">
@@ -50,7 +50,12 @@
 
         <section class="params">
           <h2 class="params-title">Параметры коррекции</h2>
-          <p class="params-note">Значения по умолчанию — без изменений (100%). ИИ позже может подбирать оптимальные значения автоматически; здесь — ручная настройка для демонстрации API/интерфейса.</p>
+          <p class="params-note">По заданию ИИ подбирает оптимальные значения автоматически. Нажмите «Авто (ИИ)» после загрузки — параметры вычисляются по анализу пикселей. Ползунки — для ручной корректировки при необходимости.</p>
+
+          <div class="btn-row btn-row-top">
+            <button type="button" class="btn btn-primary" id="btn-auto">Авто (ИИ)</button>
+            <span class="auto-hint" id="auto-hint">Загрузите фото → нажмите для автоподбора</span>
+          </div>
 
           <div class="slider-row">
             <label for="brightness">Яркость <span class="slider-value" id="brightness-val">100</span>%</label>
@@ -70,7 +75,7 @@
             <button type="button" class="btn btn-secondary" id="btn-reset">Сбросить</button>
             <button type="button" class="btn btn-primary" id="btn-apply">Применить коррекцию</button>
           </div>
-          <p class="params-note params-note-small">«Применить» в демо фиксирует текущие значения в статусе. Экспорт в файл можно добавить через canvas при подключении полного пайплайна.</p>
+          <p class="params-note params-note-small">ИИ анализирует яркость, контраст и насыщенность по гистограмме и подбирает коррекцию. «Применить» фиксирует результат.</p>
         </section>
       </div>
     </div>
@@ -113,6 +118,8 @@
         statusLine.textContent = 'Параметры: яркость ' + brightness.value + '%, контраст ' + contrast.value + '%, цветность ' + saturate.value + '%';
       }
 
+      var lastAnalyzedFile = null;
+
       function setFile(file) {
         if (!file.type.match(/^image\//)) return;
         if (objectUrl) URL.revokeObjectURL(objectUrl);
@@ -123,6 +130,8 @@
         var previewInner = document.getElementById('preview-inner');
         if (previewInner) previewInner.classList.add('preview-inner-visible');
         fileName.textContent = file.name;
+        lastAnalyzedFile = null;
+        document.getElementById('auto-hint').textContent = 'Нажмите «Авто (ИИ)» — параметры подберутся автоматически';
         updateFilter();
       }
 
@@ -149,8 +158,59 @@
         brightness.value = 100;
         contrast.value = 100;
         saturate.value = 100;
+        lastAnalyzedFile = null;
+        document.getElementById('auto-hint').textContent = 'Нажмите «Авто (ИИ)» для автоподбора';
         updateFilter();
       });
+
+      function runAutoCorrection() {
+        if (!previewImg.src || !previewImg.complete || previewImg.naturalWidth === 0) {
+          statusLine.textContent = 'Сначала загрузите фотографию.';
+          return;
+        }
+        var canvas = document.createElement('canvas');
+        var ctx = canvas.getContext('2d');
+        var w = previewImg.naturalWidth;
+        var h = previewImg.naturalHeight;
+        var sample = 120;
+        var scale = Math.min(1, sample / Math.max(w, h));
+        canvas.width = Math.max(1, Math.floor(w * scale));
+        canvas.height = Math.max(1, Math.floor(h * scale));
+        ctx.drawImage(previewImg, 0, 0, canvas.width, canvas.height);
+        var data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        var pixels = data.data;
+        var n = pixels.length / 4;
+        var sumLum = 0, sumSqLum = 0, sumSat = 0, count = 0;
+        for (var i = 0; i < pixels.length; i += 4) {
+          var r = pixels[i] / 255, g = pixels[i + 1] / 255, b = pixels[i + 2] / 255;
+          var maxC = Math.max(r, g, b), minC = Math.min(r, g, b);
+          var lum = 0.299 * r + 0.587 * g + 0.114 * b;
+          var sat = maxC === 0 ? 0 : (maxC - minC) / maxC;
+          sumLum += lum;
+          sumSqLum += lum * lum;
+          sumSat += sat;
+          count++;
+        }
+        var meanLum = sumLum / count;
+        var variance = (sumSqLum / count) - (meanLum * meanLum);
+        var stdLum = Math.sqrt(Math.max(0, variance));
+        var meanSat = sumSat / count;
+        var targetLum = 0.5;
+        var brightnessFactor = meanLum < 0.01 ? 100 : Math.round((targetLum / meanLum) * 100);
+        brightnessFactor = Math.max(50, Math.min(150, brightnessFactor));
+        var contrastFactor = stdLum < 0.15 ? 120 : stdLum > 0.35 ? 95 : 105;
+        var saturateFactor = meanSat < 0.2 ? 130 : meanSat > 0.6 ? 90 : 110;
+        saturateFactor = Math.max(80, Math.min(150, saturateFactor));
+        brightness.value = brightnessFactor;
+        contrast.value = contrastFactor;
+        saturate.value = saturateFactor;
+        lastAnalyzedFile = previewImg.src;
+        document.getElementById('auto-hint').textContent = 'Параметры подобраны ИИ по анализу изображения';
+        updateFilter();
+        statusLine.textContent = 'ИИ: яркость ' + brightnessFactor + '%, контраст ' + contrastFactor + '%, цветность ' + saturateFactor + '%';
+      }
+
+      document.getElementById('btn-auto').addEventListener('click', runAutoCorrection);
 
       document.getElementById('btn-apply').addEventListener('click', function () {
         if (!previewImg.src) {

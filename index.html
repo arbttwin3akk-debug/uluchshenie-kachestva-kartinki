@@ -28,9 +28,9 @@
 
       <div class="upload-card">
         <div class="dropzone" id="dropzone">
-          <input type="file" id="file-input" accept="image/jpeg,image/png,image/webp" hidden />
+          <input type="file" id="file-input" accept="image/jpeg,image/png,image/webp" multiple hidden />
           <div class="dropzone-icon" aria-hidden="true">📷</div>
-          <p class="dropzone-title">Выбрать фотографию</p>
+          <p class="dropzone-title">Выбрать фотографии</p>
           <p class="dropzone-hint">С компьютера или перетащите сюда</p>
           <button type="button" class="btn btn-secondary" id="btn-browse">Обзор…</button>
         </div>
@@ -39,13 +39,9 @@
 
       <div class="layout-correction">
         <div class="preview-box">
-          <p class="preview-label">Превью с коррекцией</p>
-          <div class="preview-frame">
-            <div class="preview-inner" id="preview-inner">
-              <img id="preview-img" alt="" />
-            </div>
-            <p class="preview-placeholder" id="preview-placeholder">Сначала выберите изображение</p>
-          </div>
+          <p class="preview-label">Превью с коррекцией <span class="photo-count" id="photo-count"></span></p>
+          <div class="thumb-grid" id="thumb-grid"></div>
+          <p class="preview-placeholder" id="preview-placeholder">Сначала выберите одно или несколько изображений</p>
         </div>
 
         <section class="params">
@@ -73,8 +69,9 @@
           <div class="status-line" id="status-line">Параметры: яркость 100%, контраст 100%, цветность 100%</div>
           <div class="btn-row">
             <button type="button" class="btn btn-secondary" id="btn-reset">Сбросить</button>
+            <button type="button" class="btn btn-secondary" id="btn-clear">Очистить</button>
             <button type="button" class="btn btn-primary" id="btn-apply">Применить коррекцию</button>
-            <button type="button" class="btn btn-download" id="btn-download">Скачать</button>
+            <button type="button" class="btn btn-download" id="btn-download">Скачать все</button>
           </div>
           <p class="params-note params-note-small">ИИ анализирует яркость, контраст и насыщенность по гистограмме и подбирает коррекцию. «Применить» фиксирует результат.</p>
         </section>
@@ -95,8 +92,9 @@
       var input = document.getElementById('file-input');
       var btnBrowse = document.getElementById('btn-browse');
       var fileName = document.getElementById('file-name');
-      var previewImg = document.getElementById('preview-img');
+      var thumbGrid = document.getElementById('thumb-grid');
       var previewPlaceholder = document.getElementById('preview-placeholder');
+      var photoCount = document.getElementById('photo-count');
       var brightness = document.getElementById('brightness');
       var contrast = document.getElementById('contrast');
       var saturate = document.getElementById('saturate');
@@ -104,38 +102,96 @@
       var contrastVal = document.getElementById('contrast-val');
       var saturateVal = document.getElementById('saturate-val');
       var statusLine = document.getElementById('status-line');
-      var objectUrl = null;
-      var currentFileName = 'foto';
+      var images = [];
 
       document.getElementById('year').textContent = new Date().getFullYear();
 
+      function getFilter() {
+        var b = brightness.value / 100, c = contrast.value / 100, s = saturate.value / 100;
+        return 'brightness(' + b + ') contrast(' + c + ') saturate(' + s + ')';
+      }
+
       function updateFilter() {
-        var b = brightness.value / 100;
-        var c = contrast.value / 100;
-        var s = saturate.value / 100;
-        previewImg.style.filter = 'brightness(' + b + ') contrast(' + c + ') saturate(' + s + ')';
+        var f = getFilter();
+        thumbGrid.querySelectorAll('.thumb-img').forEach(function (img) { img.style.filter = f; });
         brightnessVal.textContent = brightness.value;
         contrastVal.textContent = contrast.value;
         saturateVal.textContent = saturate.value;
         statusLine.textContent = 'Параметры: яркость ' + brightness.value + '%, контраст ' + contrast.value + '%, цветность ' + saturate.value + '%';
       }
 
-      var lastAnalyzedFile = null;
+      function renderThumbs() {
+        thumbGrid.innerHTML = '';
+        images.forEach(function (item, idx) {
+          var wrap = document.createElement('div');
+          wrap.className = 'thumb-wrap';
+          var img = document.createElement('img');
+          img.className = 'thumb-img';
+          img.src = item.url;
+          img.alt = item.name;
+          img.style.filter = getFilter();
+          var nameEl = document.createElement('span');
+          nameEl.className = 'thumb-name';
+          nameEl.textContent = item.name;
+          var btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'btn btn-download btn-thumb';
+          btn.textContent = '↓';
+          btn.title = 'Скачать';
+          btn.onclick = function () { downloadOne(idx); };
+          wrap.appendChild(img);
+          wrap.appendChild(nameEl);
+          wrap.appendChild(btn);
+          thumbGrid.appendChild(wrap);
+        });
+        previewPlaceholder.style.display = images.length ? 'none' : 'block';
+        photoCount.textContent = images.length ? '(' + images.length + ')' : '';
+        fileName.textContent = images.length ? images.map(function (i) { return i.name; }).join(', ') : '';
+      }
 
-      function setFile(file) {
-        if (!file.type.match(/^image\//)) return;
-        if (objectUrl) URL.revokeObjectURL(objectUrl);
-        objectUrl = URL.createObjectURL(file);
-        previewImg.src = objectUrl;
-        previewImg.classList.add('preview-img-visible');
-        previewPlaceholder.style.display = 'none';
-        var previewInner = document.getElementById('preview-inner');
-        if (previewInner) previewInner.classList.add('preview-inner-visible');
-        fileName.textContent = file.name;
-        currentFileName = file.name.replace(/\.[^.]+$/, '') || 'foto';
-        lastAnalyzedFile = null;
-        document.getElementById('auto-hint').textContent = 'Нажмите «Авто (ИИ)» — параметры подберутся автоматически';
-        updateFilter();
+      function setFiles(files) {
+        for (var i = 0; i < files.length; i++) {
+          var f = files[i];
+          if (!f.type || !f.type.match(/^image\//)) continue;
+          images.push({
+            file: f,
+            url: URL.createObjectURL(f),
+            name: f.name.replace(/\.[^.]+$/, '') || 'foto'
+          });
+        }
+        renderThumbs();
+        document.getElementById('auto-hint').textContent = images.length ? 'Нажмите «Авто (ИИ)» — параметры по первому фото' : 'Загрузите фото';
+      }
+
+      function clearAll() {
+        images.forEach(function (i) { URL.revokeObjectURL(i.url); });
+        images = [];
+        renderThumbs();
+      }
+
+      function downloadOne(idx) {
+        var item = images[idx];
+        var img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = function () {
+          var b = brightness.value / 100, c = contrast.value / 100, s = saturate.value / 100;
+          var canvas = document.createElement('canvas');
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          var ctx = canvas.getContext('2d');
+          ctx.filter = 'brightness(' + b + ') contrast(' + c + ') saturate(' + s + ')';
+          ctx.drawImage(img, 0, 0);
+          canvas.toBlob(function (blob) {
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = 'korrektirovka-' + item.name + '.png';
+            a.click();
+            URL.revokeObjectURL(url);
+            statusLine.textContent = 'Скачано: ' + item.name;
+          }, 'image/png');
+        };
+        img.src = item.url;
       }
 
       btnBrowse.addEventListener('click', function () { input.click(); });
@@ -147,10 +203,11 @@
       dropzone.addEventListener('drop', function (e) {
         e.preventDefault();
         dropzone.classList.remove('dropzone-active');
-        if (e.dataTransfer.files && e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
+        if (e.dataTransfer.files && e.dataTransfer.files.length) setFiles(Array.from(e.dataTransfer.files));
       });
       input.addEventListener('change', function () {
-        if (input.files && input.files[0]) setFile(input.files[0]);
+        if (input.files && input.files.length) setFiles(Array.from(input.files));
+        input.value = '';
       });
 
       [brightness, contrast, saturate].forEach(function (el) {
@@ -161,89 +218,72 @@
         brightness.value = 100;
         contrast.value = 100;
         saturate.value = 100;
-        lastAnalyzedFile = null;
-        document.getElementById('auto-hint').textContent = 'Нажмите «Авто (ИИ)» для автоподбора';
+        document.getElementById('auto-hint').textContent = images.length ? 'Нажмите «Авто (ИИ)»' : 'Загрузите фото';
         updateFilter();
       });
 
+      document.getElementById('btn-clear').addEventListener('click', function () {
+        clearAll();
+        statusLine.textContent = 'Все фотографии удалены.';
+      });
+
       function runAutoCorrection() {
-        if (!previewImg.src || !previewImg.complete || previewImg.naturalWidth === 0) {
-          statusLine.textContent = 'Сначала загрузите фотографию.';
+        if (!images.length) {
+          statusLine.textContent = 'Сначала загрузите фотографии.';
           return;
         }
-        var canvas = document.createElement('canvas');
-        var ctx = canvas.getContext('2d');
-        var w = previewImg.naturalWidth;
-        var h = previewImg.naturalHeight;
-        var sample = 120;
-        var scale = Math.min(1, sample / Math.max(w, h));
-        canvas.width = Math.max(1, Math.floor(w * scale));
-        canvas.height = Math.max(1, Math.floor(h * scale));
-        ctx.drawImage(previewImg, 0, 0, canvas.width, canvas.height);
-        var data = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        var pixels = data.data;
-        var n = pixels.length / 4;
-        var sumLum = 0, sumSqLum = 0, sumSat = 0, count = 0;
-        for (var i = 0; i < pixels.length; i += 4) {
-          var r = pixels[i] / 255, g = pixels[i + 1] / 255, b = pixels[i + 2] / 255;
-          var maxC = Math.max(r, g, b), minC = Math.min(r, g, b);
-          var lum = 0.299 * r + 0.587 * g + 0.114 * b;
-          var sat = maxC === 0 ? 0 : (maxC - minC) / maxC;
-          sumLum += lum;
-          sumSqLum += lum * lum;
-          sumSat += sat;
-          count++;
-        }
-        var meanLum = sumLum / count;
-        var variance = (sumSqLum / count) - (meanLum * meanLum);
-        var stdLum = Math.sqrt(Math.max(0, variance));
-        var meanSat = sumSat / count;
-        var targetLum = 0.5;
-        var brightnessFactor = meanLum < 0.01 ? 100 : Math.round((targetLum / meanLum) * 100);
-        brightnessFactor = Math.max(50, Math.min(150, brightnessFactor));
-        var contrastFactor = stdLum < 0.15 ? 120 : stdLum > 0.35 ? 95 : 105;
-        var saturateFactor = meanSat < 0.2 ? 130 : meanSat > 0.6 ? 90 : 110;
-        saturateFactor = Math.max(80, Math.min(150, saturateFactor));
-        brightness.value = brightnessFactor;
-        contrast.value = contrastFactor;
-        saturate.value = saturateFactor;
-        lastAnalyzedFile = previewImg.src;
-        document.getElementById('auto-hint').textContent = 'Параметры подобраны ИИ по анализу изображения';
-        updateFilter();
-        statusLine.textContent = 'ИИ: яркость ' + brightnessFactor + '%, контраст ' + contrastFactor + '%, цветность ' + saturateFactor + '%';
+        var img = new Image();
+        img.onload = function () {
+          var canvas = document.createElement('canvas');
+          var ctx = canvas.getContext('2d');
+          var w = img.naturalWidth, h = img.naturalHeight;
+          var sample = 120;
+          var scale = Math.min(1, sample / Math.max(w, h));
+          canvas.width = Math.max(1, Math.floor(w * scale));
+          canvas.height = Math.max(1, Math.floor(h * scale));
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          var data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          var pixels = data.data;
+          var sumLum = 0, sumSqLum = 0, sumSat = 0, count = 0;
+          for (var i = 0; i < pixels.length; i += 4) {
+            var r = pixels[i] / 255, g = pixels[i + 1] / 255, b = pixels[i + 2] / 255;
+            var maxC = Math.max(r, g, b), minC = Math.min(r, g, b);
+            var lum = 0.299 * r + 0.587 * g + 0.114 * b;
+            var sat = maxC === 0 ? 0 : (maxC - minC) / maxC;
+            sumLum += lum; sumSqLum += lum * lum; sumSat += sat; count++;
+          }
+          var meanLum = sumLum / count;
+          var variance = (sumSqLum / count) - (meanLum * meanLum);
+          var stdLum = Math.sqrt(Math.max(0, variance));
+          var meanSat = sumSat / count;
+          var brightnessFactor = meanLum < 0.01 ? 100 : Math.round((0.5 / meanLum) * 100);
+          brightnessFactor = Math.max(50, Math.min(150, brightnessFactor));
+          var contrastFactor = stdLum < 0.15 ? 120 : stdLum > 0.35 ? 95 : 105;
+          var saturateFactor = meanSat < 0.2 ? 130 : meanSat > 0.6 ? 90 : 110;
+          saturateFactor = Math.max(80, Math.min(150, saturateFactor));
+          brightness.value = brightnessFactor;
+          contrast.value = contrastFactor;
+          saturate.value = saturateFactor;
+          document.getElementById('auto-hint').textContent = 'Параметры по первому фото';
+          updateFilter();
+          statusLine.textContent = 'ИИ: яркость ' + brightnessFactor + '%, контраст ' + contrastFactor + '%, цветность ' + saturateFactor + '%';
+        };
+        img.src = images[0].url;
       }
 
       document.getElementById('btn-auto').addEventListener('click', runAutoCorrection);
 
       document.getElementById('btn-apply').addEventListener('click', function () {
-        if (!previewImg.src) {
-          statusLine.textContent = 'Сначала выберите фотографию.';
-          return;
-        }
-        statusLine.textContent = 'Коррекция зафиксирована: яркость ' + brightness.value + '%, контраст ' + contrast.value + '%, цветность ' + saturate.value + '%';
+        if (!images.length) { statusLine.textContent = 'Сначала выберите фотографии.'; return; }
+        statusLine.textContent = 'Коррекция: яркость ' + brightness.value + '%, контраст ' + contrast.value + '%, цветность ' + saturate.value + '%';
       });
 
       document.getElementById('btn-download').addEventListener('click', function () {
-        if (!previewImg.src || !previewImg.complete || previewImg.naturalWidth === 0) {
-          statusLine.textContent = 'Сначала загрузите фотографию.';
-          return;
-        }
-        var b = brightness.value / 100, c = contrast.value / 100, s = saturate.value / 100;
-        var canvas = document.createElement('canvas');
-        canvas.width = previewImg.naturalWidth;
-        canvas.height = previewImg.naturalHeight;
-        var ctx = canvas.getContext('2d');
-        ctx.filter = 'brightness(' + b + ') contrast(' + c + ') saturate(' + s + ')';
-        ctx.drawImage(previewImg, 0, 0);
-        canvas.toBlob(function (blob) {
-          var url = URL.createObjectURL(blob);
-          var a = document.createElement('a');
-          a.href = url;
-          a.download = 'korrektirovka-' + currentFileName + '.png';
-          a.click();
-          URL.revokeObjectURL(url);
-          statusLine.textContent = 'Скачано. Файл: korrektirovka-*.png';
-        }, 'image/png');
+        if (!images.length) { statusLine.textContent = 'Сначала загрузите фотографии.'; return; }
+        images.forEach(function (_, idx) {
+          setTimeout(function () { downloadOne(idx); }, idx * 200);
+        });
+        statusLine.textContent = 'Скачивание ' + images.length + ' файлов…';
       });
     })();
   </script>

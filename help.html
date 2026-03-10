@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Справка по инструменту увеличения изображений." />
+  <title>Справка — ФотоУсиление</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="index.html">ФотоУсиление</a>
+      <nav class="topnav">
+        <a href="index.html">Увеличить</a>
+        <a href="help.html">Справка</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="help-main">
+    <div class="wrap">
+      <h1 class="page-heading">Справка</h1>
+      <p class="page-sub">Кратко о том, как пользоваться страницей.</p>
+
+      <div class="help-block">
+        <h2>Форматы</h2>
+        <p>Поддерживаются распространённые форматы изображений (JPG, PNG и др.) в зависимости от браузера. Тяжёлые файлы лучше не перегружать без необходимости.</p>
+      </div>
+      <div class="help-block">
+        <h2>Множитель 2× и 4×</h2>
+        <p>Множитель задаёт во сколько раз увеличиваются ширина и высота. Реальная обработка (ИИ или интерполяция) подключается отдельно — эта страница демонстрирует интерфейс.</p>
+      </div>
+      <div class="help-block">
+        <h2>Конфиденциальность</h2>
+        <p>При демо-режиме файл не отправляется на сервер. При подключении бэкенда политику хранения нужно описать отдельно.</p>
+      </div>
+
+      <a class="back-link" href="index.html">← На главную</a>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <span>© <span id="year"></span></span>
+      <a href="index.html">Увеличить</a>
+    </div>
+  </footer>
+  <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
+</body>
+</html>

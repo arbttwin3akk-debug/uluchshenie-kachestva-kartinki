@@ -3,83 +3,125 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Про IT-технологии — обзор направлений: облако, безопасность, DevOps, ИИ и разработка." />
-  <title>Про IT-технологии</title>
+  <meta name="description" content="Увеличение и улучшение качества изображений. Загрузите файл и выберите параметры." />
+  <title>Увеличить изображение</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <header class="header">
-    <div class="container header-row">
-      <a class="logo" href="index.html">Про IT</a>
-      <nav class="nav">
-        <a href="index.html">Главная</a>
-        <a href="technologies.html">Технологии</a>
-        <a href="career.html">Карьера</a>
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="index.html">ФотоУсиление</a>
+      <nav class="topnav">
+        <a href="index.html">Увеличить</a>
+        <a href="help.html">Справка</a>
       </nav>
     </div>
   </header>
 
-  <main>
-    <section class="hero">
-      <div class="container">
-        <p class="kicker">Образовательный проект</p>
-        <h1 class="hero-title">Про IT-технологии</h1>
-        <p class="hero-lead">Современная разработка, инфраструктура, безопасность и данные — в одном месте. Без привязки к другим проектам: отдельный сайт и отдельный репозиторий.</p>
-        <a class="btn" href="technologies.html">Смотреть направления</a>
-      </div>
-    </section>
+  <main class="main">
+    <div class="wrap">
+      <h1 class="page-heading">Увеличить изображение</h1>
+      <p class="page-sub">Загрузите файл и при необходимости выберите масштаб. Обработка может выполняться на стороне сервиса или в браузере — в зависимости от реализации.</p>
 
-    <section class="section">
-      <div class="container">
-        <h2 class="h2">Зачем это нужно</h2>
-        <div class="grid-3">
-          <article class="card">
-            <span class="card-icon">01</span>
-            <h3>Структура</h3>
-            <p>IT — не только программирование: сети, облака, CI/CD и поддержка продакшена.</p>
-          </article>
-          <article class="card">
-            <span class="card-icon">02</span>
-            <h3>Актуальность</h3>
-            <p>Технологии меняются быстро; важно понимать базовые концепции, а не только синтаксис.</p>
-          </article>
-          <article class="card">
-            <span class="card-icon">03</span>
-            <h3>Практика</h3>
-            <p>От идеи до деплоя: контейнеры, хостинг, мониторинг — часть реальной работы.</p>
-          </article>
+      <div class="upload-card">
+        <div class="dropzone" id="dropzone">
+          <input type="file" id="file-input" accept="image/jpeg,image/png,image/webp" hidden />
+          <div class="dropzone-icon" aria-hidden="true">⬆</div>
+          <p class="dropzone-title">Выбрать изображения</p>
+          <p class="dropzone-hint">Загрузить с компьютера или перетащить сюда</p>
+          <button type="button" class="btn btn-secondary" id="btn-browse">Обзор…</button>
         </div>
+        <p class="file-name" id="file-name"></p>
       </div>
-    </section>
 
-    <section class="section section-dark">
-      <div class="container">
-        <h2 class="h2 h2-light">Блоки знаний</h2>
-        <ul class="tag-list">
-          <li>Языки и фреймворки</li>
-          <li>Git и командная работа</li>
-          <li>Linux и терминал</li>
-          <li>HTTP, API, JSON</li>
-          <li>Базы данных</li>
-          <li>Облака (AWS, GCP, Cloudflare)</li>
-          <li>Безопасность</li>
-          <li>Машинное обучение</li>
-        </ul>
-      </div>
-    </section>
+      <section class="params">
+        <h2 class="params-title">Параметры увеличения</h2>
+        <p class="params-note">Выберите множитель размера и нажмите «Увеличить». Для демо-страницы кнопка не отправляет файл на сервер — только показывает выбранные настройки.</p>
+        <div class="multiplier-group" role="group" aria-label="Множитель размера">
+          <button type="button" class="chip chip-active" data-mult="2">2×</button>
+          <button type="button" class="chip" data-mult="4">4×</button>
+        </div>
+        <div class="preview-dims" id="preview-dims">Размер после: укажите файл</div>
+        <button type="button" class="btn btn-primary btn-block" id="btn-run">Увеличить</button>
+      </section>
+    </div>
   </main>
 
-  <footer class="footer">
-    <div class="container footer-row">
-      <span>Про IT-технологии</span>
-      <span class="mono" id="year"></span>
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <span>© <span id="year"></span> — инструмент для изображений</span>
+      <a href="help.html">Помощь</a>
     </div>
   </footer>
+
   <script>
-    document.getElementById('year').textContent = '© ' + new Date().getFullYear();
+    (function () {
+      var dropzone = document.getElementById('dropzone');
+      var input = document.getElementById('file-input');
+      var btnBrowse = document.getElementById('btn-browse');
+      var fileName = document.getElementById('file-name');
+      var previewDims = document.getElementById('preview-dims');
+      var chips = document.querySelectorAll('.chip');
+      var mult = 2;
+      var currentFile = null;
+
+      document.getElementById('year').textContent = new Date().getFullYear();
+
+      btnBrowse.addEventListener('click', function () { input.click(); });
+      dropzone.addEventListener('click', function (e) {
+        if (e.target !== btnBrowse && !btnBrowse.contains(e.target)) input.click();
+      });
+      dropzone.addEventListener('dragover', function (e) {
+        e.preventDefault();
+        dropzone.classList.add('dropzone-active');
+      });
+      dropzone.addEventListener('dragleave', function () {
+        dropzone.classList.remove('dropzone-active');
+      });
+      dropzone.addEventListener('drop', function (e) {
+        e.preventDefault();
+        dropzone.classList.remove('dropzone-active');
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
+      });
+      input.addEventListener('change', function () {
+        if (input.files && input.files[0]) setFile(input.files[0]);
+      });
+
+      function setFile(file) {
+        if (!file.type.match(/^image\//)) return;
+        currentFile = file;
+        fileName.textContent = file.name;
+        var img = new Image();
+        img.onload = function () {
+          var w = img.naturalWidth, h = img.naturalHeight;
+          previewDims.textContent = 'Исходный размер: ' + w + ' × ' + h + ' → после ' + mult + '×: ' + (w * mult) + ' × ' + (h * mult);
+        };
+        img.src = URL.createObjectURL(file);
+      }
+
+      chips.forEach(function (c) {
+        c.addEventListener('click', function () {
+          chips.forEach(function (x) { x.classList.remove('chip-active'); });
+          c.classList.add('chip-active');
+          mult = parseInt(c.getAttribute('data-mult'), 10);
+          if (currentFile && previewDims.textContent.indexOf('Исходный') !== -1) {
+            var m = previewDims.textContent.match(/Исходный размер: (\d+) × (\d+)/);
+            if (m) previewDims.textContent = 'Исходный размер: ' + m[1] + ' × ' + m[2] + ' → после ' + mult + '×: ' + (m[1] * mult) + ' × ' + (m[2] * mult);
+          }
+        });
+      });
+
+      document.getElementById('btn-run').addEventListener('click', function () {
+        if (!currentFile) {
+          previewDims.textContent = 'Сначала выберите изображение.';
+          return;
+        }
+        previewDims.textContent = 'Выбрано: ' + currentFile.name + ', множитель ' + mult + '×. (Демо — без загрузки на сервер.)';
+      });
+    })();
   </script>
 </body>
 </html>

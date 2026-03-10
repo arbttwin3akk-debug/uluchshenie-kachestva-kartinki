@@ -1,20 +1,23 @@
-# Cloudflare Pages — без VPN часто не открывается; основной вход см. GitHub Pages workflow.
-# Секрет CLOUDFLARE_API_TOKEN — по желанию; без него job пропускается.
+# Cloudflare Pages — нормальная ссылка korrekciya-fotografiy.pages.dev
+# Нужны секреты: CLOUDFLARE_API_TOKEN и CLOUDFLARE_ACCOUNT_ID (см. README или Cloudflare docs)
 name: Deploy to Cloudflare Pages
 
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   deploy:
-    if: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
+    if: ${{ secrets.CLOUDFLARE_API_TOKEN != '' && secrets.CLOUDFLARE_ACCOUNT_ID != '' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - run: npx wrangler pages deploy . --project-name=korrekciya-fotografiy
+      - name: Deploy to Cloudflare Pages
+        run: npx wrangler pages deploy . --project-name=korrekciya-fotografiy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

@@ -266,6 +266,8 @@ body {
   border-radius: var(--radius);
   padding: 1rem;
   box-shadow: var(--shadow);
+  overflow: hidden;
+  max-width: 100%;
 }
 
 .preview-label {
@@ -275,47 +277,57 @@ body {
   color: var(--muted);
 }
 
+/* Рамка превью: без flex у img — иначе браузер тянет натуральный размер */
 .preview-frame {
   position: relative;
   background: var(--bg);
   border-radius: var(--radius);
-  /* Фиксированная «витрина» — фото любого размера вписывается внутрь */
   width: 100%;
   max-width: 100%;
-  height: 260px;
-  max-height: min(260px, 45vh);
-  display: flex;
-  align-items: center;
-  justify-content: center;
   overflow: hidden;
+  text-align: center;
+}
+
+/* Внутренний контейнер жёстко ограничивает высоту — фото не может «вылезти» */
+.preview-inner {
+  display: none;
+  max-width: 100%;
+  max-height: 220px;
+  overflow: hidden;
+  line-height: 0;
+  margin: 0 auto;
+}
+
+.preview-inner.preview-inner-visible {
+  display: block;
+}
+
+/* Обычный размер превью: не больше 220px по высоте и не шире блока */
+.preview-inner img,
+.preview-frame img {
+  display: none;
+  max-width: 100% !important;
+  max-height: 220px !important;
+  width: auto !important;
+  height: auto !important;
+  vertical-align: middle;
+  object-fit: contain;
+  box-sizing: border-box;
+}
+
+.preview-inner img.preview-img-visible,
+.preview-frame img.preview-img-visible {
+  display: inline-block;
 }
 
 @media (min-width: 768px) {
-  .preview-frame {
-    height: 280px;
-    max-height: min(280px, 40vh);
+  .preview-inner {
+    max-height: 260px;
   }
-}
-
-.preview-frame img {
-  display: none;
-  /* Вписать в рамку без вылезания */
-  max-width: 100%;
-  max-height: 100%;
-  width: auto;
-  height: auto;
-  object-fit: contain;
-  object-position: center;
-}
-
-.preview-frame img.preview-img-visible {
-  display: block;
-  /* Явно ограничить, если браузер игнорирует max-height у flex-ребёнка */
-  width: 100%;
-  height: 100%;
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
+  .preview-inner img,
+  .preview-frame img {
+    max-height: 260px !important;
+  }
 }
 
 .preview-placeholder {

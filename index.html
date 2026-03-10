@@ -41,7 +41,9 @@
         <div class="preview-box">
           <p class="preview-label">Превью с коррекцией</p>
           <div class="preview-frame">
-            <img id="preview-img" alt="" />
+            <div class="preview-inner" id="preview-inner">
+              <img id="preview-img" alt="" />
+            </div>
             <p class="preview-placeholder" id="preview-placeholder">Сначала выберите изображение</p>
           </div>
         </div>
@@ -118,6 +120,8 @@
         previewImg.src = objectUrl;
         previewImg.classList.add('preview-img-visible');
         previewPlaceholder.style.display = 'none';
+        var previewInner = document.getElementById('preview-inner');
+        if (previewInner) previewInner.classList.add('preview-inner-visible');
         fileName.textContent = file.name;
         updateFilter();
       }

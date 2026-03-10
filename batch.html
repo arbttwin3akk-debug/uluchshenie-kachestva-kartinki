@@ -25,7 +25,7 @@
   <main class="batch-main">
     <div class="wrap wrap-wide">
       <h1 class="page-heading">Папки</h1>
-      <p class="page-sub">Выберите <strong>папку-источник</strong> (откуда брать фото) и <strong>папку-результат</strong> (куда сохранять обработанные). Коррекция применяется ко всем изображениям. Работает в Chrome и Edge; требует HTTPS или localhost.</p>
+      <p class="page-sub">Выберите <strong>папку-источник</strong> и <strong>папку-результат</strong>. При нажатии «Обработать» ИИ анализирует <strong>каждую фотографию отдельно</strong> и подбирает оптимальные параметры яркости, контраста и цветности для каждого снимка. Работает в Chrome и Edge (HTTPS).</p>
 
       <div class="folder-cards">
         <div class="folder-card">
@@ -45,8 +45,8 @@
       <section class="params">
         <h2 class="params-title">Параметры коррекции</h2>
         <div class="btn-row btn-row-top">
-          <button type="button" class="btn btn-primary" id="btn-auto">Авто (ИИ)</button>
-          <span class="auto-hint">Выберите папку-источник → нажмите для автоподбора по первому фото</span>
+          <button type="button" class="btn btn-primary" id="btn-auto">Авто (ИИ) — превью</button>
+          <span class="auto-hint">Подбор параметров по первому фото для предпросмотра. При «Обработать» ИИ обрабатывает каждое фото отдельно.</span>
         </div>
         <div class="slider-row">
           <label for="b">Яркость <span class="slider-value" id="b-val">100</span>%</label>
@@ -187,16 +187,50 @@
         }
       }
 
-      function processImage(file, filter) {
+      function analyzeImage(ctx, w, h) {
+        var data = ctx.getImageData(0, 0, w, h);
+        var pixels = data.data;
+        var sumLum = 0, sumSqLum = 0, sumSat = 0, count = 0;
+        for (var i = 0; i < pixels.length; i += 4) {
+          var r = pixels[i] / 255, g = pixels[i + 1] / 255, bl = pixels[i + 2] / 255;
+          var maxC = Math.max(r, g, bl), minC = Math.min(r, g, bl);
+          var lum = 0.299 * r + 0.587 * g + 0.114 * bl;
+          var sat = maxC === 0 ? 0 : (maxC - minC) / maxC;
+          sumLum += lum; sumSqLum += lum * lum; sumSat += sat; count++;
+        }
+        var meanLum = sumLum / count;
+        var variance = (sumSqLum / count) - (meanLum * meanLum);
+        var stdLum = Math.sqrt(Math.max(0, variance));
+        var meanSat = sumSat / count;
+        var brightnessFactor = meanLum < 0.01 ? 100 : Math.round((0.5 / meanLum) * 100);
+        brightnessFactor = Math.max(50, Math.min(150, brightnessFactor));
+        var contrastFactor = stdLum < 0.15 ? 120 : stdLum > 0.35 ? 95 : 105;
+        var saturateFactor = meanSat < 0.2 ? 130 : meanSat > 0.6 ? 90 : 110;
+        saturateFactor = Math.max(80, Math.min(150, saturateFactor));
+        return { b: brightnessFactor, c: contrastFactor, s: saturateFactor };
+      }
+
+      function processImageWithAI(file) {
         return new Promise(function (resolve, reject) {
           var img = new Image();
           var url = URL.createObjectURL(file);
           img.onload = function () {
             URL.revokeObjectURL(url);
+            var w = img.naturalWidth, h = img.naturalHeight;
+            var sample = 120;
+            var scale = Math.min(1, sample / Math.max(w, h));
+            var smallW = Math.max(1, Math.floor(w * scale));
+            var smallH = Math.max(1, Math.floor(h * scale));
             var canvas = document.createElement('canvas');
-            canvas.width = img.naturalWidth;
-            canvas.height = img.naturalHeight;
+            canvas.width = smallW;
+            canvas.height = smallH;
             var ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, smallW, smallH);
+            var params = analyzeImage(ctx, smallW, smallH);
+            var filter = 'brightness(' + (params.b / 100) + ') contrast(' + (params.c / 100) + ') saturate(' + (params.s / 100) + ')';
+            canvas.width = w;
+            canvas.height = h;
+            ctx = canvas.getContext('2d');
             ctx.filter = filter;
             ctx.drawImage(img, 0, 0);
             canvas.toBlob(function (blob) { resolve(blob); }, 'image/png');
@@ -211,14 +245,13 @@
           status.textContent = 'Сначала выберите обе папки.';
           return;
         }
-        var filter = 'brightness(' + (b.value / 100) + ') contrast(' + (c.value / 100) + ') saturate(' + (s.value / 100) + ')';
         var count = 0, err = 0;
-        status.textContent = 'Обработка…';
+        status.textContent = 'ИИ обрабатывает каждое фото отдельно…';
         try {
           for await (const fileHandle of listImages(srcHandle)) {
             try {
               var file = await fileHandle.getFile();
-              var blob = await processImage(file, filter);
+              var blob = await processImageWithAI(file);
               var base = file.name.replace(/\.[^.]+$/, '') || 'foto';
               var outName = base + '.png';
               var outFile = await dstHandle.getFileHandle(outName, { create: true });

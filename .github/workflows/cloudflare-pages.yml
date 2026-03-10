@@ -15,6 +15,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - run: npx wrangler pages deploy . --project-name=uluchshenie-kachestva-kartinki
+      - run: npx wrangler pages deploy . --project-name=korrekciya-fotografiy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

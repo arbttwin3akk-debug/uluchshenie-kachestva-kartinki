@@ -51,9 +51,18 @@ body {
 
 .brand {
   font-weight: 700;
-  font-size: 1.125rem;
+  font-size: 0.95rem;
   color: var(--primary);
   text-decoration: none;
+  max-width: 280px;
+  line-height: 1.3;
+}
+
+@media (min-width: 640px) {
+  .brand {
+    font-size: 1.05rem;
+    max-width: none;
+  }
 }
 
 .topnav {

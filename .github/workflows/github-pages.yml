@@ -17,7 +17,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: github-pages-pro-it
+  group: github-pages-uluchshenie-kachestva
   cancel-in-progress: true
 
 jobs:

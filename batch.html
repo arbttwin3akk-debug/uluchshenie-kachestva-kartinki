@@ -59,6 +59,7 @@
           <h2 class="params-title">Параметры коррекции</h2>
           <div class="btn-row btn-row-top">
             <button type="button" class="btn btn-primary" id="btn-auto-single">Авто (ИИ)</button>
+            <button type="button" class="btn btn-primary btn-download" id="btn-process-single">Обработать</button>
           </div>
           <div class="slider-row">
             <label for="b-single">Яркость <span class="slider-value" id="b-val-single">100</span>%</label>
@@ -307,7 +308,7 @@
         if (file) { e.preventDefault(); loadSingleImage(file); }
       });
 
-      document.getElementById('btn-auto-single').addEventListener('click', function () {
+      function runProcessSingle() {
         if (!singleOriginalImg) { statusSingle.textContent = 'Сначала загрузите фото.'; return; }
         var canvas = document.createElement('canvas');
         var w = singleOriginalImg.naturalWidth, h = singleOriginalImg.naturalHeight;
@@ -320,8 +321,10 @@
         bS.value = params.b; cS.value = params.c; sS.value = params.s;
         updateSingleLabels();
         applySinglePreview();
-        statusSingle.textContent = 'ИИ: яркость ' + params.b + '%, контраст ' + params.c + '%, цветность ' + params.s + '%';
-      });
+        statusSingle.textContent = 'Обработано. ИИ: яркость ' + params.b + '%, контраст ' + params.c + '%, цветность ' + params.s + '%';
+      }
+      document.getElementById('btn-auto-single').addEventListener('click', runProcessSingle);
+      document.getElementById('btn-process-single').addEventListener('click', runProcessSingle);
 
       document.getElementById('btn-download-single').addEventListener('click', function () {
         if (!singleOriginalCanvas) { statusSingle.textContent = 'Сначала загрузите фото.'; return; }

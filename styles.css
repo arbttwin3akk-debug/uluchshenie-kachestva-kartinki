@@ -112,12 +112,11 @@ body {
 }
 
 .tab-btn {
-  padding: 0.65rem 1.5rem;
+  padding: 0.65rem 1.25rem;
   font-size: 0.9375rem;
   font-weight: 600;
   background: none;
   border: none;
-  border-radius: 999px;
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
   cursor: pointer;
@@ -325,8 +324,8 @@ body {
 /* Buttons */
 .btn {
   display: inline-block;
-  padding: 0.6rem 1.5rem;
-  border-radius: 50%;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius);
   font-weight: 600;
   font-size: 0.9375rem;
   cursor: pointer;
@@ -398,7 +397,7 @@ body {
 .chip {
   padding: 0.5rem 1.25rem;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: var(--radius);
   background: var(--surface);
   font-weight: 600;
   cursor: pointer;
@@ -614,7 +613,9 @@ body {
 }
 
 .btn-row .btn-primary {
-  padding: 0.65rem 1.25rem;
+  flex: 1;
+  min-width: 160px;
+  padding: 0.65rem 1rem;
 }
 
 .params-note-small {
